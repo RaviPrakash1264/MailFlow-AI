@@ -45,51 +45,26 @@ facts justify it, replying to the customer, and logging a support ticket — wit
 ## Architecture
 
 ```mermaid
-flowchart TB
-    customer([✉️ Customer])
+flowchart LR
+    cust(["👤 Customer"]) -->|"① sends email"| inbox[("📬 Mailpit inbox")]
+    inbox -->|"② poll every 10s"| monitor["InboxMonitor"]
+    monitor -->|"③ new email"| brain["🤖 SupportAgent<br/><i>ChatClient</i>"]
 
-    subgraph mailbox["📬 Mailbox (Mailpit)"]
-        inbox[("SMTP inbox<br/><i>support@example.com</i>")]
-    end
+    brain <-->|"④ tool calls"| tools["🛠️ mcp-server<br/><i>MCP tools</i>"]
+    tools <-->|"⑤ read / write"| mysql[("💾 MySQL")]
+    brain <-->|"reasoning"| openai{{"🧠 OpenAI"}}
 
-    subgraph agent["🤖 support-agent"]
-        monitor["InboxMonitor<br/><i>polls unread mail</i>"]
-        handler["AgentEmailHandler"]
-        core["SupportAgent<br/><i>ChatClient + system prompt</i>"]
-        sender["SupportMailSender<br/><i>threaded reply over SMTP</i>"]
-        seed["SeedMailController<br/><i>/seed-mail (test helper)</i>"]
-    end
-
-    subgraph mcp["🛠️ mcp-server (MCP tools)"]
-        query["SupportQueryTools<br/>lookup_customer · get_customer_orders<br/>detect_duplicate_charges · check_warranty<br/>get_customer_ticket_history"]
-        action["SupportActionTools<br/>issue_refund · log_support_ticket"]
-    end
-
-    subgraph data["💾 Data & External"]
-        mysql[("MySQL<br/>customers · orders · payments<br/>refunds · tickets")]
-        openai{{"OpenAI<br/>chat"}}
-    end
-
-    customer -->|SMTP| inbox
-    monitor -->|REST API poll| inbox
-    monitor --> handler
-    handler --> core
-    core -->|MCP tool calls| query
-    core -->|MCP tool calls| action
-    query --> mysql
-    action --> mysql
-    core --> openai
-    handler --> sender
-    sender -->|SMTP reply| inbox
-    seed -->|SMTP| inbox
+    brain -->|"⑥ reply + ticket"| sender["SupportMailSender"]
+    sender -->|"⑦ threaded reply"| inbox
+    inbox -->|"⑧ delivered"| cust
 
     classDef mailStyle fill:#e3f2fd,stroke:#1976d2,color:#0d47a1;
     classDef agentStyle fill:#f3e5f5,stroke:#7b1fa2,color:#4a148c;
     classDef mcpStyle fill:#fff3e0,stroke:#f57c00,color:#e65100;
     classDef dataStyle fill:#e8f5e9,stroke:#388e3c,color:#1b5e20;
     class inbox mailStyle;
-    class monitor,handler,core,sender,seed agentStyle;
-    class query,action mcpStyle;
+    class monitor,brain,sender agentStyle;
+    class tools mcpStyle;
     class mysql,openai dataStyle;
 ```
 
