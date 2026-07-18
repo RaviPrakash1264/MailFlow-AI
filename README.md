@@ -45,13 +45,13 @@ facts justify it, replying to the customer, and logging a support ticket — wit
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
     cust(["👤 Customer"]) -->|"① sends email"| inbox[("📬 Mailpit inbox")]
     inbox -->|"② poll every 10s"| monitor["InboxMonitor"]
-    monitor -->|"③ new email"| brain["🤖 SupportAgent<br/><i>ChatClient</i>"]
+    monitor -->|"③ new email"| brain["🤖 SupportAgent<br/><i>ChatClient + system prompt</i>"]
 
-    brain <-->|"④ tool calls"| tools["🛠️ mcp-server<br/><i>MCP tools</i>"]
-    tools <-->|"⑤ read / write"| mysql[("💾 MySQL")]
+    brain <-->|"④ MCP tool calls"| tools["🛠️ mcp-server<br/>lookup_customer_by_email · get_customer_orders<br/>get_order_by_number · search_products · get_product_by_sku<br/>detect_duplicate_charges · check_warranty<br/>get_customer_ticket_history · issue_refund · log_support_ticket"]
+    tools <-->|"⑤ read / write"| mysql[("💾 MySQL<br/>customers · products · orders<br/>order_items · payments · refunds · support_tickets")]
     brain <-->|"reasoning"| openai{{"🧠 OpenAI"}}
 
     brain -->|"⑥ reply + ticket"| sender["SupportMailSender"]
